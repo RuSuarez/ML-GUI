@@ -16,7 +16,6 @@ Data source: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 - matplotlib
 - sklearn
 - xgboost
-- Pillow
 
 ## Usage
 

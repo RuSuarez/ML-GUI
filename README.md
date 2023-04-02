@@ -2,6 +2,10 @@
 
 This is a Graphical User Interface (GUI) for fitting and applying classification models on CSV files. The GUI allows the user to load a CSV file, select X and y columns, choose a classification algorithm, fit the model, evaluate the performance metrics, export the predictions, and apply the model to a new CSV file.
 
+Example data already included in repo.
+- txs_train_test.csv for train and test model
+- new_txs.csv to apply model to "new" transations
+
 ## Dependencies
 
 - Python 3.6+

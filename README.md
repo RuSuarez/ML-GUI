@@ -5,6 +5,7 @@ This is a Graphical User Interface (GUI) for fitting and applying classification
 Example data included in repo.
 - txs_train_test.csv for train and test model
 - new_txs.csv to apply model to "new" transations 
+Data source: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 
 ## Dependencies
 

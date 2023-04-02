@@ -72,6 +72,12 @@ class Application(tk.Frame):
         self.save_x_button["command"] = self.save_x_columns
         self.save_x_button.pack(side="left")
 
+        # Select all X columns
+        self.select_all_x_button = tk.Button(self.x_frame)
+        self.select_all_x_button["text"] = "Select All"
+        self.select_all_x_button["command"] = self.select_all_x_columns
+        self.select_all_x_button.pack(side="top")
+
         # Frame for y column selection
         self.y_frame = tk.Frame(self)
         self.y_frame.pack(side="left")
@@ -141,10 +147,10 @@ class Application(tk.Frame):
         self.xgboost_button.pack(side="top")
 
         # Perform Regression button
-        self.perform_regression_button = tk.Button(self)
-        self.perform_regression_button["text"] = "Perform Regression"
-        self.perform_regression_button["command"] = self.perform_regression
-        self.perform_regression_button.pack(side="top")
+        self.fit_model_button = tk.Button(self)
+        self.fit_model_button["text"] = "Fit model"
+        self.fit_model_button["command"] = self.fit_model
+        self.fit_model_button.pack(side="top")
 
         # Output text
         self.output_text = tk.Text(self.output_frame, height=30, width=180)
@@ -152,23 +158,47 @@ class Application(tk.Frame):
 
         # Export button
         self.export_button = tk.Button(self)
-        self.export_button["text"] = "Export Predictions"
+        self.export_button["text"] = "Export Predictions on Test data"
         self.export_button["command"] = self.export_predictions
         self.export_button.pack(side="top")
+
+        # Apply model button
+        self.apply_model_button = tk.Button(self)
+        self.apply_model_button["text"] = "Apply Model"
+        self.apply_model_button["command"] = self.apply_model
+        self.apply_model_button.pack(side="top")
 
     def load_csv(self):
         # Load CSV file using file dialog
         file_path = filedialog.askopenfilename()
         self.df = pd.read_csv(file_path)
-        # Clear the text box
-        self.output_text.delete('1.0', tk.END)
+
+        # Clear the text box and add scrollbar
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.configure(wrap="none")
+
         # Display the first 5 rows in the text box
         self.output_text.insert(tk.END, "Your csv has the following format:\n")
         self.output_text.insert(tk.END, self.df.head(5).to_string() + "\n")
+
         # Populate X and y listboxes with column names
         for column in self.df.columns:
             self.x_listbox.insert(tk.END, column)
             self.y_listbox.insert(tk.END, column)
+
+        # Add a horizontal scrollbar to the output_text box
+        self.output_text_xscrollbar = tk.Scrollbar(self.output_frame, orient=tk.HORIZONTAL)
+        self.output_text_xscrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.output_text_xscrollbar.config(command=self.output_text.xview)
+        self.output_text.configure(xscrollcommand=self.output_text_xscrollbar.set)
+
+        # Add the Select All button to the x_frame
+        self.select_all_x_button = tk.Button(self.x_frame, text="Select All", command=self.select_all_x_columns)
+        self.select_all_x_button.pack(side=tk.BOTTOM)
+
+
+    def select_all_x_columns(self):
+        self.x_listbox.selection_set(0, tk.END)
 
     def save_x_columns(self):
         # Save selected X columns
@@ -214,7 +244,7 @@ class Application(tk.Frame):
         self.x_columns = []
         self.y_column = None
 
-    def perform_regression(self):
+    def fit_model(self):
         if self.df is None:
             self.output_text.insert("end", "Please upload a CSV file\n")
             return
@@ -236,16 +266,17 @@ class Application(tk.Frame):
         y = self.df[self.y_column]
 
         # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
         # Fit the algorithm to the training data
-        self.algorithm.fit(X_train, y_train)
+        self.algorithm.fit(self.X_train, self.y_train)
 
         # Make predictions on the testing data
-        y_pred = self.algorithm.predict_proba(X_test)[:, 1]
+        self.y_test_pred = self.algorithm.predict(self.X_test)
+        self.y_test_pred_proba = self.algorithm.predict_proba(self.X_test)[:, 1]
 
         # Calculate metrics
-        report = classification_report(y_test, y_pred.round(), output_dict=True)
+        report = classification_report(self.y_test, self.y_test_pred, output_dict=True)
         precision = report['1']['precision']
         accuracy = report['accuracy']
         recall = report['1']['recall']
@@ -257,42 +288,54 @@ class Application(tk.Frame):
         self.output_text.insert("end", f"Recall: {recall:.2f}\n")
         self.output_text.insert("end", f"F2 Score: {f2_score:.2f}\n")
 
+
     def export_predictions(self):
-        if self.df is None:
-            self.output_text.insert("end", "Please upload a CSV file\n")
-            return
-
-        if not self.x_columns:
-            self.output_text.insert("end", "Please select at least one X column\n")
-            return
-
-        if self.y_column is None:
-            self.output_text.insert("end", "Please select a y column\n")
-            return
-
         if self.algorithm is None:
             self.output_text.insert("end", "Please select an algorithm\n")
             return
 
-        # Split the data into X and y
-        X = self.df[self.x_columns]
-        y = self.df[self.y_column]
+        # Make predictions on the test dataset
+        y_pred_proba = self.algorithm.predict_proba(self.X_test)[:, 1]
+        y_pred = self.algorithm.predict(self.X_test)
 
-        # Fit the algorithm to the full dataset
-        self.algorithm.fit(X, y)
-
-        # Make predictions on the full dataset
-        y_pred_proba = self.algorithm.predict_proba(X)[:, 1]
-        y_pred = self.algorithm.predict(X)
-
-        # Add predictions y as new columns in the DataFrame
-        self.df["predicted_y"] = y_pred
-        self.df["predicted_y_proba"] = y_pred_proba
+        # Create a new dataframe with the test data and predictions
+        test_df = pd.concat([self.X_test, self.y_test], axis=1)
+        test_df["predicted_y"] = y_pred
+        test_df["predicted_y_proba"] = y_pred_proba
 
         # Open file dialog to save CSV file
         file_path = filedialog.asksaveasfilename(defaultextension=".csv")
 
         # Export the DataFrame to a CSV file
-        self.df.to_csv(file_path, index=False)
+        test_df.to_csv(file_path, index=False)
 
+        self.output_text.insert("end", f"Predictions exported to {file_path}\n")
+
+    def apply_model(self):
+        # Check if a model has been trained
+        if self.algorithm is None:
+            self.output_text.insert("end", "Please fit a model first\n")
+            return
+        
+        # Load new CSV file
+        file_path = filedialog.askopenfilename()
+        new_df = pd.read_csv(file_path)
+        
+        # Get X columns from the new CSV
+        new_X = new_df[self.x_columns]
+        
+        # Make predictions using the previously fit model
+        new_y_pred_proba = self.algorithm.predict_proba(new_X)[:, 1]
+        new_y_pred = self.algorithm.predict(new_X)
+        
+        # Add predictions to the new CSV
+        new_df["predicted_y"] = new_y_pred
+        new_df["predicted_y_proba"] = new_y_pred_proba
+        
+        # Open file dialog to save CSV file
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv")
+        
+        # Export the DataFrame to a CSV file
+        new_df.to_csv(file_path, index=False)
+        
         self.output_text.insert("end", f"Predictions exported to {file_path}\n")

@@ -16,7 +16,6 @@ from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from PIL import Image, ImageTk
 from sklearn.metrics import classification_report
 
 
@@ -30,7 +29,14 @@ class Application(tk.Frame):
         self.df = None
         self.x_columns = []
         self.y_column = None
-        self.master.geometry("1600x600")
+        self.master.geometry("1400x600")
+
+    def create_button(self, parent, text, command):
+        button = tk.Button(parent)
+        button["text"] = text
+        button["command"] = command
+        button.pack(side="top", anchor="w")
+        return button
 
     def create_widgets(self):
         # Create a frame for the output text
@@ -38,16 +44,10 @@ class Application(tk.Frame):
         self.output_frame.pack(side=tk.TOP, padx=10, pady=10)
 
         # Button to upload CSV file
-        self.upload_button = tk.Button(self)
-        self.upload_button["text"] = "Upload CSV"
-        self.upload_button["command"] = self.load_csv
-        self.upload_button.pack(side="top", anchor="w")
+        self.create_button(parent=self, text="Upload CSV", command=self.load_csv).pack(side="top", anchor="w")
 
         # Clear Output button
-        self.clear_output_button = tk.Button(self)
-        self.clear_output_button["text"] = "Clear Output"
-        self.clear_output_button["command"] = self.clear_output
-        self.clear_output_button.pack(side="top", anchor="w")
+        self.create_button(parent=self, text="Clear Output", command=self.clear_output).pack(side="top", anchor="w")
 
         # Frame for X column selection
         self.x_frame = tk.Frame(self)
@@ -67,16 +67,10 @@ class Application(tk.Frame):
         self.x_listbox.pack(side="left")
 
         # Button to save X columns
-        self.save_x_button = tk.Button(self.x_listbox_frame)
-        self.save_x_button["text"] = "Save"
-        self.save_x_button["command"] = self.save_x_columns
-        self.save_x_button.pack(side="left")
+        self.create_button(parent=self.x_listbox_frame, text="Save", command=self.save_x_columns).pack(side="top")
 
         # Select all X columns
-        self.select_all_x_button = tk.Button(self.x_frame)
-        self.select_all_x_button["text"] = "Select All"
-        self.select_all_x_button["command"] = self.select_all_x_columns
-        self.select_all_x_button.pack(side="top")
+        self.create_button(parent=self.x_listbox_frame, text="Select All", command=self.select_all_x_columns).pack(side="top")
 
         # Frame for y column selection
         self.y_frame = tk.Frame(self)
@@ -96,10 +90,7 @@ class Application(tk.Frame):
         self.y_listbox.pack(side="left")
 
         # Button to save y column
-        self.save_y_button = tk.Button(self.y_listbox_frame)
-        self.save_y_button["text"] = "Save"
-        self.save_y_button["command"] = self.save_y_column
-        self.save_y_button.pack(side="left")
+        self.create_button(parent=self.y_listbox_frame, text="Save", command=self.save_y_column).pack(side="top")
 
         # Frame for algorithm selection
         self.algorithm_frame = tk.Frame(self)
@@ -111,62 +102,35 @@ class Application(tk.Frame):
         self.algorithm_label.pack(side="top")
 
         # Button for Logistic Regression
-        self.logistic_regression_button = tk.Button(self.algorithm_frame)
-        self.logistic_regression_button["text"] = "Logistic Regression"
-        self.logistic_regression_button["command"] = self.set_logistic_regression
-        self.logistic_regression_button.pack(side="top")
+        self.create_button(parent=self.algorithm_frame, text="Logistic Regression", command=self.set_logistic_regression).pack(side="top")
 
         # Button for Decision Tree
-        self.decision_tree_button = tk.Button(self.algorithm_frame)
-        self.decision_tree_button["text"] = "Decision Tree"
-        self.decision_tree_button["command"] = self.set_decision_tree_classifier
-        self.decision_tree_button.pack(side="top")
+        self.create_button(parent=self.algorithm_frame, text="Decision Tree", command=self.set_decision_tree_classifier).pack(side="top")
 
         # Button for Random Forest
-        self.random_forest_button = tk.Button(self.algorithm_frame)
-        self.random_forest_button["text"] = "Random Forest"
-        self.random_forest_button["command"] = self.set_random_forest_classifier
-        self.random_forest_button.pack(side="top")
+        self.create_button(parent=self.algorithm_frame, text="Random Forest", command=self.set_random_forest_classifier).pack(side="top")
 
         # Button SVM
-        self.svm_button = tk.Button(self.algorithm_frame)
-        self.svm_button["text"] = "Support Vector Machine"
-        self.svm_button["command"] = self.set_svm_classifier
-        self.svm_button.pack(side="top")
-
+        self.create_button(self.algorithm_frame, "Support Vector Machine", self.set_svm_classifier)
+        
         # Button for K-Nearest Neighbors
-        self.knn_button = tk.Button(self.algorithm_frame)
-        self.knn_button["text"] = "K-Nearest Neighbors"
-        self.knn_button["command"] = self.set_knn_classifier
-        self.knn_button.pack(side="top")
-
+        self.create_button(self.algorithm_frame, "K-Nearest Neighbors", self.set_knn_classifier)
+        
         # Perform XGBoost
-        self.xgboost_button = tk.Button(self.algorithm_frame)
-        self.xgboost_button["text"] = "XGBoost"
-        self.xgboost_button["command"] = self.set_xgboost_classifier
-        self.xgboost_button.pack(side="top")
-
+        self.create_button(self.algorithm_frame, "XGBoost", self.set_xgboost_classifier)
+        
         # Perform Regression button
-        self.fit_model_button = tk.Button(self)
-        self.fit_model_button["text"] = "Fit model"
-        self.fit_model_button["command"] = self.fit_model
-        self.fit_model_button.pack(side="top")
-
+        self.create_button(self, "Fit model and print performance metrics", self.fit_model)
+        
         # Output text
         self.output_text = tk.Text(self.output_frame, height=30, width=180)
         self.output_text.pack(side="top")
-
+        
         # Export button
-        self.export_button = tk.Button(self)
-        self.export_button["text"] = "Export Predictions on Test data"
-        self.export_button["command"] = self.export_predictions
-        self.export_button.pack(side="top")
-
+        self.create_button(self, "Export predictions on test data", self.export_predictions).pack(side="top")
+        
         # Apply model button
-        self.apply_model_button = tk.Button(self)
-        self.apply_model_button["text"] = "Apply Model"
-        self.apply_model_button["command"] = self.apply_model
-        self.apply_model_button.pack(side="top")
+        self.create_button(self, "Apply model to new dataset", self.apply_model).pack(side="top")
 
     def load_csv(self):
         # Load CSV file using file dialog
@@ -191,10 +155,6 @@ class Application(tk.Frame):
         self.output_text_xscrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.output_text_xscrollbar.config(command=self.output_text.xview)
         self.output_text.configure(xscrollcommand=self.output_text_xscrollbar.set)
-
-        # Add the Select All button to the x_frame
-        self.select_all_x_button = tk.Button(self.x_frame, text="Select All", command=self.select_all_x_columns)
-        self.select_all_x_button.pack(side=tk.BOTTOM)
 
 
     def select_all_x_columns(self):

@@ -3,7 +3,7 @@ from app import Application
 
 # Create root window
 root = tk.Tk()
-root.title("Ruben - Machine Learning GUI")
+root.title("Machine Learning GUI")
 app = Application(master=root)
 
 # Start the application

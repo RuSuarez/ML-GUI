@@ -1,3 +1,5 @@
+![Screenshot](https://user-images.githubusercontent.com/121521393/229355464-5dd6c250-08a2-4174-87ee-a51c1f076669.png)
+
 # Machine Learning GUI
 
 This is a Graphical User Interface (GUI) for fitting and applying classification models on CSV files. The GUI allows the user to load a CSV file, select X and y columns, choose a classification algorithm, fit the model, evaluate the performance metrics, export the predictions, and apply the model to a new CSV file.

@@ -1,5 +1,6 @@
 import tkinter as tk
 import pandas as pd
+import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
 
@@ -20,14 +21,15 @@ from sklearn.metrics import classification_report
 
 
 class Application(tk.Frame):
-    def __init__(self, master=None):
-        super().__init__(master)
+    def __init__(self, master=None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
         self.master = master
         self.pack()
         self.create_widgets()
         self.algorithm = None
         self.df = None
         self.x_columns = []
+        self.null_columns = []
         self.y_column = None
         self.master.geometry("1400x600")
 
@@ -55,7 +57,7 @@ class Application(tk.Frame):
 
         # Label for X column selection
         self.x_label = tk.Label(self.x_frame)
-        self.x_label["text"] = "Select X columns:"
+        self.x_label["text"] = "Select features:"
         self.x_label.pack(side="top")
 
         # Frame for X column listbox and save button
@@ -78,7 +80,7 @@ class Application(tk.Frame):
 
         # Label for y column selection
         self.y_label = tk.Label(self.y_frame)
-        self.y_label["text"] = "Select y column:"
+        self.y_label["text"] = "Select target column:"
         self.y_label.pack(side="top")
 
         # Frame for y column listbox and save button
@@ -133,42 +135,137 @@ class Application(tk.Frame):
         self.create_button(self, "Apply model to new dataset", self.apply_model).pack(side="top")
 
     def load_csv(self):
-        # Load CSV file using file dialog
-        file_path = filedialog.askopenfilename()
-        self.df = pd.read_csv(file_path)
+            # Load CSV file using file dialog
+            file_path = filedialog.askopenfilename()
+            self.df = pd.read_csv(file_path)
 
-        # Clear the text box and add scrollbar
-        self.output_text.delete("1.0", tk.END)
-        self.output_text.configure(wrap="none")
+            # Clear the text box and add scrollbar
+            self.output_text.delete("1.0", tk.END)
+            self.output_text.configure(wrap="none")
 
-        # Display the first 5 rows in the text box
-        self.output_text.insert(tk.END, "Your csv has the following format:\n")
-        self.output_text.insert(tk.END, self.df.head(5).to_string() + "\n")
+            # Display the first 5 rows in the text box
+            self.output_text.insert(tk.END, "Your csv has the following format:\n")
+            self.output_text.insert(tk.END, self.df.head(5).to_string() + "\n")
 
-        # Populate X and y listboxes with column names
-        for column in self.df.columns:
-            self.x_listbox.insert(tk.END, column)
-            self.y_listbox.insert(tk.END, column)
+            # Populate X and y listboxes with column names
+            for column in self.df.columns:
+                self.x_listbox.insert(tk.END, column)
+                self.y_listbox.insert(tk.END, column)
 
-        # Add a horizontal scrollbar to the output_text box
-        self.output_text_xscrollbar = tk.Scrollbar(self.output_frame, orient=tk.HORIZONTAL)
-        self.output_text_xscrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.output_text_xscrollbar.config(command=self.output_text.xview)
-        self.output_text.configure(xscrollcommand=self.output_text_xscrollbar.set)
-
+            # Add a horizontal scrollbar to the output_text box
+            self.output_text_xscrollbar = tk.Scrollbar(self.output_frame, orient=tk.HORIZONTAL)
+            self.output_text_xscrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+            self.output_text_xscrollbar.config(command=self.output_text.xview)
+            self.output_text.configure(xscrollcommand=self.output_text_xscrollbar.set)
 
     def select_all_x_columns(self):
         self.x_listbox.selection_set(0, tk.END)
 
+    # def save_x_columns(self):
+    #     # Save selected X columns
+    #     self.x_columns = [self.x_listbox.get(idx) for idx in self.x_listbox.curselection()]
+    #     self.output_text.insert(tk.END, f"Selected features: {', '.join(self.x_columns)}\n")
+
     def save_x_columns(self):
         # Save selected X columns
         self.x_columns = [self.x_listbox.get(idx) for idx in self.x_listbox.curselection()]
-        self.output_text.insert(tk.END, f"Selected X columns: {', '.join(self.x_columns)}\n")
+        self.output_text.insert(tk.END, f"Selected features: {', '.join(self.x_columns)}\n")
+        
+        # Apply null strategies to the selected X columns
+        null_columns = self.check_null_values(self.df[self.x_columns])
+        if null_columns:
+            self.apply_null_strategies(null_columns)
 
     def save_y_column(self):
         # Save selected y column
         self.y_column = self.y_listbox.get(self.y_listbox.curselection())
-        self.output_text.insert(tk.END, f"Selected y column: {self.y_column}\n")
+        self.output_text.insert(tk.END, f"Selected target column: {self.y_column}\n")
+
+    def check_null_values(self, df):
+        # Find null columns
+        null_columns = df.columns[df.isnull().any()].tolist()
+
+        # If there are null columns, create a popup window with options to replace null values
+        if null_columns:
+            self.null_window = tk.Toplevel(self.master)
+            self.null_window.title("Null Values")
+
+            # Create a frame to hold the options for each null column
+            self.null_frame = tk.Frame(self.null_window)
+            self.null_frame.pack(side="top", padx=10, pady=10)
+
+            # Create a label for the frame
+            self.null_label = tk.Label(self.null_frame)
+            self.null_label["text"] = "Select strategy to replace null values:"
+            self.null_label.pack(side="top")
+
+            # Create a dictionary to store the strategies for each column
+            self.null_strategies = {}
+
+            for column in null_columns:
+                # Create a frame for each null column
+                column_frame = tk.Frame(self.null_frame)
+                column_frame.pack(side="top")
+
+                # Determine the data type of the column
+                data_type = df[column].dtype
+
+                # Set the options based on the data type
+                if data_type == "object" or data_type == "bool":
+                    options = ["Most Common", "Drop"]
+                else:
+                    options = ["Mean", "Median", "Drop"]
+
+                # Create a label for the column
+                column_label = tk.Label(column_frame)
+                column_label["text"] = f"{column} ({data_type})"
+                column_label.pack(side="left")
+
+                # Create a dropdown menu for the column with strategies
+                strategy_var = tk.StringVar(column_frame)
+                strategy_var.set(options[0])
+                strategy_dropdown = tk.OptionMenu(column_frame, strategy_var, *options)
+                strategy_dropdown.pack(side="left")
+
+                # Store the strategy for the column in the null_strategies dictionary
+                self.null_strategies[column] = strategy_var
+
+            # Create an apply button to execute all strategies and replace null values
+            apply_button = tk.Button(self.null_window, text="Apply", command=self.apply_null_strategies)
+            apply_button.pack(side="bottom")
+
+            # Focus on the null window
+            self.null_window.focus()
+
+    def apply_null_strategies(self):
+        # Replace null values for each column
+        for column, strategy_var in self.null_strategies.items():
+            strategy = strategy_var.get()
+
+            if self.df[column].dtype == np.number:
+                if strategy == "Mean":
+                    self.df[column].fillna(self.df[column].mean(), inplace=True)
+                elif strategy == "Median":
+                    self.df[column].fillna(self.df[column].median(), inplace=True)
+                else:
+                    self.df.dropna(subset=[column], inplace=True)
+            else:
+                if self.df[column].dtype == bool:
+                    most_common = self.df[column].mode()[0]
+                    self.df[column].fillna(most_common, inplace=True)
+                elif self.df[column].dtype == object:
+                    most_common = self.df[column].mode()[0]
+                    if strategy == "Most Common":
+                        self.df[column].fillna(most_common, inplace=True)
+                    else:
+                        self.df.dropna(subset=[column], inplace=True)
+
+        # Close the null window and display the updated dataframe
+        self.null_window.destroy()
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert(tk.END, "Your csv has the following format after filling null values:\n")
+        self.output_text.insert(tk.END, self.df.head(5).to_string() + "\n")
+        self.save_x_columns()
 
     def set_logistic_regression(self):
         self.algorithm = LogisticRegression(max_iter=1000)
@@ -225,6 +322,12 @@ class Application(tk.Frame):
         X = self.df[self.x_columns]
         y = self.df[self.y_column]
 
+        # Check if any of the X columns has object dtype
+        object_cols = X.select_dtypes(include="object").columns
+        if len(object_cols) > 0:
+            # Encode object columns as dummy variables
+            X = pd.get_dummies(X, columns=object_cols)
+
         # Split the data into training and testing sets
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
@@ -240,14 +343,16 @@ class Application(tk.Frame):
         precision = report['1']['precision']
         accuracy = report['accuracy']
         recall = report['1']['recall']
-        f2_score = (5 * precision * recall) / (4 * precision + recall)
+        if 4 * precision + recall == 0:
+            f2_score = 0
+        else:
+            f2_score = (5 * precision * recall) / (4 * precision + recall)
 
         # Print the metrics
         self.output_text.insert("end", f"Precision: {precision:.2f}\n")
         self.output_text.insert("end", f"Accuracy: {accuracy:.2f}\n")
         self.output_text.insert("end", f"Recall: {recall:.2f}\n")
         self.output_text.insert("end", f"F2 Score: {f2_score:.2f}\n")
-
 
     def export_predictions(self):
         if self.algorithm is None:

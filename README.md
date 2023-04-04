@@ -27,8 +27,9 @@ python app.py
 ## GUI Description
 
 - Upload a CSV file by clicking the "Upload CSV" button.
-- Select X columns by clicking on the column names in the "Select X columns" listbox and clicking the "Save" button.
-- Select the y column by clicking on the column name in the "Select y column" listbox and clicking the "Save" button.
+- Select features by clicking on the column names in the "Select X columns" listbox and clicking the "Save" button.
+- If one or more feature columns are null, I pop up window will show offering some options to handle said missing values.
+- Select the target column by clicking on the column name in the "Select y column" listbox and clicking the "Save" button.
 - Select an algorithm by clicking on the corresponding button in the "Select algorithm" section. The available algorithms are:
     - Logistic Regression
     - Decision Tree Classifier
